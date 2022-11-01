@@ -4,19 +4,7 @@
 #include "script.h"
 #include "main.h"
 
-static struct config {
-    uint64_t connections;
-    uint64_t duration;
-    uint64_t threads;
-    uint64_t timeout;
-    uint64_t pipeline;
-    bool     delay;
-    bool     dynamic;
-    bool     latency;
-    char    *host;
-    char    *script;
-    SSL_CTX *ctx;
-} cfg;
+static config cfg;
 
 static struct {
     stats *latency;
@@ -46,6 +34,14 @@ static void usage() {
            "  Options:                                            \n"
            "    -c, --connections <N>  Connections to keep open   \n"
            "    -d, --duration    <T>  Duration of test           \n"
+#ifdef HAVE_NTLS
+           "    -n, --ntls             Use NTLS (TLCP) instead of TLS\n"
+           "    -C, --cipher      <S>  Cipher list                \n"
+           "    -S, --sign_cert   <F>  Signature certificate      \n"
+           "    -K, --sign_key    <F>  Signature key              \n"
+           "    -E, --enc_cert    <F>  Encryption certificate     \n"
+           "    -Y, --enc_key     <F>  Encryption key             \n"
+#endif
            "    -t, --threads     <N>  Number of threads to use   \n"
            "                                                      \n"
            "    -s, --script      <S>  Load Lua script file       \n"
@@ -73,7 +69,7 @@ int main(int argc, char **argv) {
     char *service = port ? port : schema;
 
     if (!strncmp("https", schema, 5)) {
-        if ((cfg.ctx = ssl_init()) == NULL) {
+        if ((cfg.ctx = ssl_init(&cfg)) == NULL) {
             fprintf(stderr, "unable to initialize SSL\n");
             ERR_print_errors_fp(stderr);
             exit(1);
@@ -377,6 +373,7 @@ static void socket_connected(aeEventLoop *loop, int fd, void *data, int mask) {
     return;
 
   error:
+
     c->thread->errors.connect++;
     reconnect_socket(c->thread, c);
 }
@@ -476,6 +473,14 @@ static struct option longopts[] = {
     { "timeout",     required_argument, NULL, 'T' },
     { "help",        no_argument,       NULL, 'h' },
     { "version",     no_argument,       NULL, 'v' },
+#ifdef HAVE_NTLS
+    { "ntls",        no_argument,       NULL, 'n' },
+    { "cipher",      required_argument, NULL, 'C' },
+    { "sign_cert",   required_argument, NULL, 'S' },
+    { "sign_key",    required_argument, NULL, 'K' },
+    { "enc_cert",    required_argument, NULL, 'E' },
+    { "enc_key",     required_argument, NULL, 'Y' },
+#endif
     { NULL,          0,                 NULL,  0  }
 };
 
@@ -488,8 +493,12 @@ static int parse_args(struct config *cfg, char **url, struct http_parser_url *pa
     cfg->connections = 10;
     cfg->duration    = 10;
     cfg->timeout     = SOCKET_TIMEOUT_MS;
-
+#ifdef HAVE_NTLS
+    while ((c = getopt_long(argc, argv, "t:c:d:s:C:H:T:S:K:E:Y:Lrvn?", longopts, NULL)) != -1) {
+#else
     while ((c = getopt_long(argc, argv, "t:c:d:s:H:T:Lrv?", longopts, NULL)) != -1) {
+#endif
+
         switch (c) {
             case 't':
                 if (scan_metric(optarg, &cfg->threads)) return -1;
@@ -500,6 +509,26 @@ static int parse_args(struct config *cfg, char **url, struct http_parser_url *pa
             case 'd':
                 if (scan_time(optarg, &cfg->duration)) return -1;
                 break;
+#ifdef HAVE_NTLS
+            case 'n':
+                cfg->ntls = true;
+                break;
+            case 'C':
+                cfg->cipher = optarg;
+                break;
+            case 'S':
+                cfg->sign_cert = optarg;
+                break;
+            case 'K':
+                cfg->sign_key = optarg;
+                break;
+            case 'E':
+                cfg->enc_cert = optarg;
+                break;
+            case 'Y':
+                cfg->enc_key = optarg;
+                break;
+#endif
             case 's':
                 cfg->script = optarg;
                 break;

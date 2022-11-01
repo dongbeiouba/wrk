@@ -16,6 +16,10 @@
 #include "ae.h"
 #include "http_parser.h"
 
+#if defined(TONGSUO_VERSION_NUMBER) || defined(BABASSL_VERSION_NUMBER)
+# define HAVE_NTLS
+#endif
+
 #define RECVBUF  8192
 
 #define MAX_THREAD_RATE_S   10000000
@@ -62,5 +66,27 @@ typedef struct connection {
     buffer body;
     char buf[RECVBUF];
 } connection;
+
+typedef struct config {
+    uint64_t connections;
+    uint64_t duration;
+    uint64_t threads;
+    uint64_t timeout;
+    uint64_t pipeline;
+    bool     delay;
+    bool     dynamic;
+    bool     latency;
+#ifdef HAVE_NTLS
+    bool     ntls;
+    char     *cipher;
+    char     *sign_cert;
+    char     *sign_key;
+    char     *enc_cert;
+    char     *enc_key;
+#endif
+    char    *host;
+    char    *script;
+    SSL_CTX *ctx;
+} config;
 
 #endif /* WRK_H */

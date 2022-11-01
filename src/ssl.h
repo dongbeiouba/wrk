@@ -3,7 +3,11 @@
 
 #include "net.h"
 
-SSL_CTX *ssl_init();
+#if defined(TONGSUO_VERSION_NUMBER) || defined(BABASSL_VERSION_NUMBER)
+# define HAVE_NTLS
+#endif
+
+SSL_CTX *ssl_init(config *);
 
 status ssl_connect(connection *, char *);
 status ssl_close(connection *);
