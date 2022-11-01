@@ -1,10 +1,9 @@
 name: build
 
-on:
-  push:
+on: [workflow_dispatch, pull_request, push]
 
 jobs:
-  build:
+  build_with_openssl:
     runs-on: ${{ matrix.builder }}
     strategy:
       matrix:
@@ -15,3 +14,30 @@ jobs:
           fetch-depth: 0
       - name: build
         run: make
+
+  build_with_tongsuo:
+    runs-on: ${{ matrix.builder }}
+    strategy:
+      matrix:
+        builder: [macos-latest, ubuntu-latest]
+    steps:
+      - name: checkout tongsuo
+        uses: actions/checkout@v2
+        with:
+          repository: Tongsuo-Project/Tongsuo
+          path: Tongsuo
+      - name: build Tongsuo
+        working-directory: ./Tongsuo
+        run: |
+          ./config --banner=Configured --prefix=${GITHUB_WORKSPACE}/install enable-ntls
+          make -s -j4
+          make install
+      - uses: actions/checkout@v2
+        with:
+          path: wrk
+          fetch-depth: 0
+      - name: build
+        working-directory: ./wrk
+        run: |
+          WITH_OPENSSL=${GITHUB_WORKSPACE}/install make
+
