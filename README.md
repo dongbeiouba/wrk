@@ -39,6 +39,18 @@
 
     -H, --header:      HTTP header to add to request, e.g. "User-Agent: wrk"
 
+    -n, --ntls:        use NTLS (TLCP) instead of TLS
+
+    -C, --cipher:      set cipher list
+
+    -S, --sign_cert:   signature certificate
+
+    -K, --sign_key:    signature key
+
+    -E, --enc_cert:    encryption certificate
+
+    -Y, --enc_key:     encryption key
+
         --latency:     print detailed latency statistics
 
         --timeout:     record a timeout if a response is not received within
